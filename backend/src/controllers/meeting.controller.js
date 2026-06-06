@@ -1,0 +1,127 @@
+const fs = require('fs');
+const path = require('path');
+const pdfParse = require('pdf-parse');
+const Meeting = require('../models/Meeting');
+const { extractMeetingData } = require('../services/ai.service');
+const { createTranscriptMeetingSchema } = require('../validators/meeting.validator');
+
+/**
+ * @desc    Create a meeting from pasted transcript text
+ * @route   POST /api/meetings/text
+ * @access  Private
+ */
+const createFromText = async (req, res) => {
+  try {
+    // 1. Validate request body
+    const { title, transcript } = createTranscriptMeetingSchema.parse(req.body);
+
+    // 2. Call Gemini AI to extract structured data synchronously
+    const aiData = await extractMeetingData(transcript);
+
+    // 3. Create and save the meeting record in MongoDB
+    const meeting = await Meeting.create({
+      userId: req.user._id,
+      title,
+      inputType: 'transcript',
+      rawText: transcript,
+      summary: aiData.summary,
+      actionItems: aiData.actionItems,
+      decisions: aiData.decisions,
+      status: 'processed', // Automatically processed since it's synchronous text
+    });
+
+    // 4. Return the completed meeting object (without rawText due to select: false, but we can return it if needed)
+    // We'll re-fetch to apply the select rules properly, or just return the object.
+    const savedMeeting = await Meeting.findById(meeting._id);
+
+    res.status(201).json(savedMeeting);
+  } catch (error) {
+    if (error.name === 'ZodError') {
+      return res.status(400).json({
+        message: 'Validation failed',
+        errors: error.errors.map((e) => e.message),
+      });
+    }
+    console.error('Meeting processing error:', error);
+    res.status(500).json({ message: error.message || 'Server error processing meeting' });
+  }
+};
+
+/**
+ * @desc    Create a meeting from an uploaded transcript file (.txt, .md, or .pdf)
+ * @route   POST /api/meetings/file
+ * @access  Private
+ */
+const createFromFile = async (req, res) => {
+  let filePath = null;
+
+  try {
+    // 1. Ensure a file was uploaded
+    if (!req.file) {
+      return res.status(400).json({ message: 'No file uploaded. Please upload a .txt, .md, or .pdf file.' });
+    }
+
+    filePath = req.file.path;
+    const title = req.body.title;
+
+    // 2. Validate title
+    if (!title || title.trim().length === 0) {
+      return res.status(400).json({ message: 'Meeting title is required.' });
+    }
+    if (title.trim().length > 200) {
+      return res.status(400).json({ message: 'Title cannot exceed 200 characters.' });
+    }
+
+    // 3. Read the file content — use pdf-parse for PDFs, plain read for text files
+    const ext = path.extname(req.file.originalname).toLowerCase();
+    let rawText;
+
+    if (ext === '.pdf') {
+      const dataBuffer = fs.readFileSync(filePath);
+      const pdfData = await pdfParse(dataBuffer);
+      rawText = pdfData.text;
+    } else {
+      rawText = fs.readFileSync(filePath, 'utf-8');
+    }
+
+    // 4. Sanitize: trim whitespace and check minimum length
+    const trimmedText = rawText.trim();
+    if (trimmedText.length < 10) {
+      return res.status(400).json({ message: 'File content is too short to extract meaningful data.' });
+    }
+
+    // 5. Send to the SAME extraction pipeline as pasted transcript
+    const aiData = await extractMeetingData(trimmedText);
+
+    // 6. Create the meeting record in MongoDB
+    const meeting = await Meeting.create({
+      userId: req.user._id,
+      title: title.trim(),
+      inputType: 'transcript_file',
+      rawText: trimmedText,
+      sourceFileName: req.file.originalname,
+      summary: aiData.summary,
+      actionItems: aiData.actionItems,
+      decisions: aiData.decisions,
+      status: 'processed',
+    });
+
+    const savedMeeting = await Meeting.findById(meeting._id);
+    res.status(201).json(savedMeeting);
+  } catch (error) {
+    console.error('File meeting processing error:', error);
+    res.status(500).json({ message: error.message || 'Server error processing uploaded file' });
+  } finally {
+    // 7. Always delete the temporary uploaded file
+    if (filePath) {
+      try {
+        fs.unlinkSync(filePath);
+      } catch (cleanupErr) {
+        console.error('Failed to clean up temp file:', cleanupErr);
+      }
+    }
+  }
+};
+
+module.exports = { createFromText, createFromFile };
+
