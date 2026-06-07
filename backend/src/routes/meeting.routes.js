@@ -1,8 +1,8 @@
 const express = require('express');
 const multer = require('multer');
-const { createFromText, createFromFile, createMeetingFromAudio } = require('../controllers/meeting.controller');
+const { createFromText, createFromFile, createMeetingFromAudio, createMeetingFromVideo } = require('../controllers/meeting.controller');
 const { protect } = require('../middleware/auth');
-const { uploadTranscriptFile, uploadAudioFile } = require('../middleware/upload');
+const { uploadTranscriptFile, uploadAudioFile, uploadVideoFile } = require('../middleware/upload');
 
 const router = express.Router();
 
@@ -45,4 +45,20 @@ router.post('/audio', (req, res, next) => {
   });
 }, createMeetingFromAudio);
 
+// Create a meeting via uploaded video file (.mp4, .mov, .webm)
+router.post('/video', (req, res, next) => {
+  uploadVideoFile.single('videoFile')(req, res, (err) => {
+    if (err instanceof multer.MulterError) {
+      if (err.code === 'LIMIT_FILE_SIZE') {
+        return res.status(400).json({ message: 'Video file is too large. Maximum size is 50 MB.' });
+      }
+      return res.status(400).json({ message: err.message });
+    } else if (err) {
+      return res.status(400).json({ message: err.message });
+    }
+    next();
+  });
+}, createMeetingFromVideo);
+
 module.exports = router;
+

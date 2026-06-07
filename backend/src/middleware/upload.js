@@ -61,4 +61,24 @@ const uploadAudioFile = multer({
   },
 });
 
-module.exports = { uploadTranscriptFile, uploadAudioFile };
+// File filter: only allow video files
+const videoFileFilter = (req, file, cb) => {
+  const allowedMimeTypes = ['video/mp4', 'video/quicktime', 'video/webm'];
+  if (allowedMimeTypes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error('Only .mp4, .mov, and .webm video files are allowed'), false);
+  }
+};
+
+// Create the configured multer instance for video files
+const uploadVideoFile = multer({
+  storage,
+  fileFilter: videoFileFilter,
+  limits: {
+    fileSize: 50 * 1024 * 1024, // 50 MB max
+  },
+});
+
+module.exports = { uploadTranscriptFile, uploadAudioFile, uploadVideoFile };
+

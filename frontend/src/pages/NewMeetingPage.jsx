@@ -7,7 +7,8 @@ const NewMeetingPage = () => {
   const [transcript, setTranscript] = useState('');
   const [file, setFile] = useState(null);
   const [audioFile, setAudioFile] = useState(null);
-  const [inputMode, setInputMode] = useState('paste'); // 'paste', 'file', or 'audio'
+  const [videoFile, setVideoFile] = useState(null);
+  const [inputMode, setInputMode] = useState('paste'); // 'paste', 'file', 'audio', or 'video'
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('');
   const [error, setError] = useState('');
@@ -17,6 +18,8 @@ const NewMeetingPage = () => {
   const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2 MB
   const ALLOWED_AUDIO_EXTENSIONS = ['.mp3', '.wav', '.m4a', '.webm'];
   const MAX_AUDIO_SIZE = 25 * 1024 * 1024; // 25 MB
+  const ALLOWED_VIDEO_EXTENSIONS = ['.mp4', '.mov', '.webm'];
+  const MAX_VIDEO_SIZE = 50 * 1024 * 1024; // 50 MB
 
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];
@@ -76,6 +79,35 @@ const NewMeetingPage = () => {
     setAudioFile(selectedFile);
   };
 
+  const handleVideoChange = (e) => {
+    const selectedFile = e.target.files[0];
+    setError('');
+
+    if (!selectedFile) {
+      setVideoFile(null);
+      return;
+    }
+
+    // Validate extension
+    const ext = selectedFile.name.substring(selectedFile.name.lastIndexOf('.')).toLowerCase();
+    if (!ALLOWED_VIDEO_EXTENSIONS.includes(ext)) {
+      setError('Only .mp4, .mov, and .webm video files are allowed.');
+      setVideoFile(null);
+      e.target.value = '';
+      return;
+    }
+
+    // Validate size
+    if (selectedFile.size > MAX_VIDEO_SIZE) {
+      setError('Video file is too large. Maximum size is 50 MB.');
+      setVideoFile(null);
+      e.target.value = '';
+      return;
+    }
+
+    setVideoFile(selectedFile);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -97,6 +129,11 @@ const NewMeetingPage = () => {
 
     if (inputMode === 'audio' && !audioFile) {
       setError('Please select an audio file to upload.');
+      return;
+    }
+
+    if (inputMode === 'video' && !videoFile) {
+      setError('Please select a video file to upload.');
       return;
     }
 
@@ -124,6 +161,14 @@ const NewMeetingPage = () => {
         response = await api.post('/meetings/audio', formData, {
           headers: { 'Content-Type': 'multipart/form-data' },
         });
+      } else if (inputMode === 'video') {
+        setLoadingMessage('Extracting audio from video & transcribing...');
+        const formData = new FormData();
+        formData.append('title', title);
+        formData.append('videoFile', videoFile);
+        response = await api.post('/meetings/video', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
       }
 
       setResult(response.data);
@@ -144,6 +189,7 @@ const NewMeetingPage = () => {
     setTranscript('');
     setFile(null);
     setAudioFile(null);
+    setVideoFile(null);
     setError('');
     setLoadingMessage('');
   };
@@ -167,7 +213,7 @@ const NewMeetingPage = () => {
           <>
             <div className="mb-8">
               <h1 className="text-3xl font-semibold mb-2">New Meeting</h1>
-              <p className="text-white/50">Paste a transcript, upload a file, or upload audio to extract insights.</p>
+              <p className="text-white/50">Paste a transcript, upload a file, audio, or video to extract insights.</p>
             </div>
 
             {error && (
@@ -226,6 +272,17 @@ const NewMeetingPage = () => {
                     }`}
                   >
                     🎙️ Upload Audio
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setInputMode('video')}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                      inputMode === 'video'
+                        ? 'bg-indigo-600 text-white'
+                        : 'bg-white/[0.04] text-white/50 hover:text-white hover:bg-white/[0.08]'
+                    }`}
+                  >
+                    🎬 Upload Video
                   </button>
                 </div>
               </div>
@@ -305,6 +362,39 @@ const NewMeetingPage = () => {
                       <span className="text-indigo-300">🎙️</span>
                       <span className="text-white/80">{audioFile.name}</span>
                       <span className="text-white/30 text-xs">({(audioFile.size / (1024 * 1024)).toFixed(1)} MB)</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Video Mode */}
+              {inputMode === 'video' && (
+                <div className="animate-[fadeIn_0.2s_ease-out]">
+                  <label className="block text-sm font-medium text-white/70 mb-2">Video File</label>
+                  <div className="relative">
+                    <input
+                      type="file"
+                      accept=".mp4,.mov,.webm,video/*"
+                      onChange={handleVideoChange}
+                      className="block w-full text-sm text-white/60
+                        file:mr-4 file:py-2.5 file:px-4
+                        file:rounded-lg file:border-0
+                        file:text-sm file:font-medium
+                        file:bg-indigo-600 file:text-white
+                        hover:file:bg-indigo-500
+                        file:cursor-pointer file:transition-colors
+                        bg-white/[0.03] border border-white/[0.08] rounded-xl
+                        cursor-pointer p-3"
+                    />
+                  </div>
+                  <p className="mt-2 text-xs text-white/30">Supported: .mp4, .mov, .webm — Max size: 50 MB</p>
+
+                  {/* Selected video file info */}
+                  {videoFile && (
+                    <div className="mt-3 flex items-center gap-2 p-3 bg-indigo-500/10 border border-indigo-500/20 rounded-xl text-sm animate-[fadeIn_0.2s_ease-out]">
+                      <span className="text-indigo-300">🎬</span>
+                      <span className="text-white/80">{videoFile.name}</span>
+                      <span className="text-white/30 text-xs">({(videoFile.size / (1024 * 1024)).toFixed(1)} MB)</span>
                     </div>
                   )}
                 </div>
