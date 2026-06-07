@@ -6,13 +6,17 @@ const NewMeetingPage = () => {
   const [title, setTitle] = useState('');
   const [transcript, setTranscript] = useState('');
   const [file, setFile] = useState(null);
-  const [inputMode, setInputMode] = useState('paste'); // 'paste' or 'file'
+  const [audioFile, setAudioFile] = useState(null);
+  const [inputMode, setInputMode] = useState('paste'); // 'paste', 'file', or 'audio'
   const [isLoading, setIsLoading] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState('');
   const [error, setError] = useState('');
   const [result, setResult] = useState(null);
 
   const ALLOWED_EXTENSIONS = ['.txt', '.md', '.pdf'];
   const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2 MB
+  const ALLOWED_AUDIO_EXTENSIONS = ['.mp3', '.wav', '.m4a', '.webm'];
+  const MAX_AUDIO_SIZE = 25 * 1024 * 1024; // 25 MB
 
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];
@@ -43,6 +47,35 @@ const NewMeetingPage = () => {
     setFile(selectedFile);
   };
 
+  const handleAudioChange = (e) => {
+    const selectedFile = e.target.files[0];
+    setError('');
+
+    if (!selectedFile) {
+      setAudioFile(null);
+      return;
+    }
+
+    // Validate extension
+    const ext = selectedFile.name.substring(selectedFile.name.lastIndexOf('.')).toLowerCase();
+    if (!ALLOWED_AUDIO_EXTENSIONS.includes(ext)) {
+      setError('Only .mp3, .wav, .m4a, and .webm audio files are allowed.');
+      setAudioFile(null);
+      e.target.value = '';
+      return;
+    }
+
+    // Validate size
+    if (selectedFile.size > MAX_AUDIO_SIZE) {
+      setError('Audio file is too large. Maximum size is 25 MB.');
+      setAudioFile(null);
+      e.target.value = '';
+      return;
+    }
+
+    setAudioFile(selectedFile);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -62,20 +95,33 @@ const NewMeetingPage = () => {
       return;
     }
 
+    if (inputMode === 'audio' && !audioFile) {
+      setError('Please select an audio file to upload.');
+      return;
+    }
+
     setIsLoading(true);
 
     try {
       let response;
 
       if (inputMode === 'paste') {
-        // Pasted transcript — JSON body
+        setLoadingMessage('Extracting AI insights...');
         response = await api.post('/meetings/text', { title, transcript });
-      } else {
-        // File upload — FormData (multipart)
+      } else if (inputMode === 'file') {
+        setLoadingMessage('Processing file...');
         const formData = new FormData();
         formData.append('title', title);
         formData.append('transcriptFile', file);
         response = await api.post('/meetings/file', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+      } else if (inputMode === 'audio') {
+        setLoadingMessage('Transcribing audio... this may take a minute');
+        const formData = new FormData();
+        formData.append('title', title);
+        formData.append('audioFile', audioFile);
+        response = await api.post('/meetings/audio', formData, {
           headers: { 'Content-Type': 'multipart/form-data' },
         });
       }
@@ -97,7 +143,9 @@ const NewMeetingPage = () => {
     setTitle('');
     setTranscript('');
     setFile(null);
+    setAudioFile(null);
     setError('');
+    setLoadingMessage('');
   };
 
   return (
@@ -119,7 +167,7 @@ const NewMeetingPage = () => {
           <>
             <div className="mb-8">
               <h1 className="text-3xl font-semibold mb-2">New Meeting</h1>
-              <p className="text-white/50">Paste a transcript or upload a file to extract insights.</p>
+              <p className="text-white/50">Paste a transcript, upload a file, or upload audio to extract insights.</p>
             </div>
 
             {error && (
@@ -167,6 +215,17 @@ const NewMeetingPage = () => {
                     }`}
                   >
                     📄 Upload File
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setInputMode('audio')}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                      inputMode === 'audio'
+                        ? 'bg-indigo-600 text-white'
+                        : 'bg-white/[0.04] text-white/50 hover:text-white hover:bg-white/[0.08]'
+                    }`}
+                  >
+                    🎙️ Upload Audio
                   </button>
                 </div>
               </div>
@@ -218,6 +277,39 @@ const NewMeetingPage = () => {
                 </div>
               )}
 
+              {/* Audio Mode */}
+              {inputMode === 'audio' && (
+                <div className="animate-[fadeIn_0.2s_ease-out]">
+                  <label className="block text-sm font-medium text-white/70 mb-2">Audio File</label>
+                  <div className="relative">
+                    <input
+                      type="file"
+                      accept=".mp3,.wav,.m4a,.webm,audio/*"
+                      onChange={handleAudioChange}
+                      className="block w-full text-sm text-white/60
+                        file:mr-4 file:py-2.5 file:px-4
+                        file:rounded-lg file:border-0
+                        file:text-sm file:font-medium
+                        file:bg-indigo-600 file:text-white
+                        hover:file:bg-indigo-500
+                        file:cursor-pointer file:transition-colors
+                        bg-white/[0.03] border border-white/[0.08] rounded-xl
+                        cursor-pointer p-3"
+                    />
+                  </div>
+                  <p className="mt-2 text-xs text-white/30">Supported: .mp3, .wav, .m4a, .webm — Max size: 25 MB</p>
+
+                  {/* Selected audio file info */}
+                  {audioFile && (
+                    <div className="mt-3 flex items-center gap-2 p-3 bg-indigo-500/10 border border-indigo-500/20 rounded-xl text-sm animate-[fadeIn_0.2s_ease-out]">
+                      <span className="text-indigo-300">🎙️</span>
+                      <span className="text-white/80">{audioFile.name}</span>
+                      <span className="text-white/30 text-xs">({(audioFile.size / (1024 * 1024)).toFixed(1)} MB)</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Submit */}
               <div className="flex justify-end">
                 <button
@@ -228,7 +320,7 @@ const NewMeetingPage = () => {
                   {isLoading ? (
                     <>
                       <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      Extracting AI Insights...
+                      {loadingMessage || 'Processing...'}
                     </>
                   ) : (
                     'Process Meeting'

@@ -3,6 +3,7 @@ const path = require('path');
 const pdfParse = require('pdf-parse');
 const Meeting = require('../models/Meeting');
 const { extractMeetingData } = require('../services/ai.service');
+const { transcribeAudio } = require('../services/transcription.service');
 const { createTranscriptMeetingSchema } = require('../validators/meeting.validator');
 
 /**
@@ -123,5 +124,71 @@ const createFromFile = async (req, res) => {
   }
 };
 
-module.exports = { createFromText, createFromFile };
+/**
+ * @desc    Create a meeting from an uploaded audio file
+ * @route   POST /api/meetings/audio
+ * @access  Private
+ */
+const createMeetingFromAudio = async (req, res) => {
+  let filePath = null;
+
+  try {
+    // 1. Ensure a file was uploaded
+    if (!req.file) {
+      return res.status(400).json({ message: 'No audio file uploaded. Please upload an .mp3, .wav, .m4a, or .webm file.' });
+    }
+
+    filePath = req.file.path;
+    const title = req.body.title;
+
+    // 2. Validate title
+    if (!title || title.trim().length === 0) {
+      return res.status(400).json({ message: 'Meeting title is required.' });
+    }
+    if (title.trim().length > 200) {
+      return res.status(400).json({ message: 'Title cannot exceed 200 characters.' });
+    }
+
+    // 3. Transcribe the audio using Gemini File API
+    const rawTranscript = await transcribeAudio(filePath, req.file.mimetype);
+
+    // 4. Validate transcript length
+    if (rawTranscript.length < 10) {
+      return res.status(400).json({ message: 'Audio transcript is too short to extract meaningful data.' });
+    }
+
+    // 5. Send transcript to the SAME extraction pipeline as pasted text / file upload
+    const aiData = await extractMeetingData(rawTranscript);
+
+    // 6. Create the meeting record in MongoDB
+    const meeting = await Meeting.create({
+      userId: req.user._id,
+      title: title.trim(),
+      inputType: 'audio',
+      rawText: rawTranscript,
+      sourceFileName: req.file.originalname,
+      summary: aiData.summary,
+      actionItems: aiData.actionItems,
+      decisions: aiData.decisions,
+      status: 'processed',
+    });
+
+    const savedMeeting = await Meeting.findById(meeting._id);
+    res.status(201).json(savedMeeting);
+  } catch (error) {
+    console.error('Audio meeting processing error:', error);
+    res.status(500).json({ message: error.message || 'Server error processing audio file' });
+  } finally {
+    // 7. Always delete the temporary uploaded audio file
+    if (filePath) {
+      try {
+        fs.unlinkSync(filePath);
+      } catch (cleanupErr) {
+        console.error('Failed to clean up temp audio file:', cleanupErr);
+      }
+    }
+  }
+};
+
+module.exports = { createFromText, createFromFile, createMeetingFromAudio };
 

@@ -1,8 +1,8 @@
 const express = require('express');
 const multer = require('multer');
-const { createFromText, createFromFile } = require('../controllers/meeting.controller');
+const { createFromText, createFromFile, createMeetingFromAudio } = require('../controllers/meeting.controller');
 const { protect } = require('../middleware/auth');
-const { uploadTranscriptFile } = require('../middleware/upload');
+const { uploadTranscriptFile, uploadAudioFile } = require('../middleware/upload');
 
 const router = express.Router();
 
@@ -29,5 +29,20 @@ router.post('/file', (req, res, next) => {
     next();
   });
 }, createFromFile);
+
+// Create a meeting via uploaded audio file (.mp3, .wav, .m4a, .webm)
+router.post('/audio', (req, res, next) => {
+  uploadAudioFile.single('audioFile')(req, res, (err) => {
+    if (err instanceof multer.MulterError) {
+      if (err.code === 'LIMIT_FILE_SIZE') {
+        return res.status(400).json({ message: 'Audio file is too large. Maximum size is 25 MB.' });
+      }
+      return res.status(400).json({ message: err.message });
+    } else if (err) {
+      return res.status(400).json({ message: err.message });
+    }
+    next();
+  });
+}, createMeetingFromAudio);
 
 module.exports = router;

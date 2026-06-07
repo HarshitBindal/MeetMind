@@ -33,7 +33,17 @@ const transcriptFileFilter = (req, file, cb) => {
   }
 };
 
-// Create the configured multer instance
+// File filter: only allow audio files
+const audioFileFilter = (req, file, cb) => {
+  const allowedMimeTypes = ['audio/mpeg', 'audio/wav', 'audio/x-wav', 'audio/mp4', 'audio/x-m4a', 'audio/webm'];
+  if (allowedMimeTypes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error('Only .mp3, .wav, .m4a, and .webm audio files are allowed'), false);
+  }
+};
+
+// Create the configured multer instance for transcript files
 const uploadTranscriptFile = multer({
   storage,
   fileFilter: transcriptFileFilter,
@@ -42,4 +52,13 @@ const uploadTranscriptFile = multer({
   },
 });
 
-module.exports = { uploadTranscriptFile };
+// Create the configured multer instance for audio files
+const uploadAudioFile = multer({
+  storage,
+  fileFilter: audioFileFilter,
+  limits: {
+    fileSize: 25 * 1024 * 1024, // 25 MB max
+  },
+});
+
+module.exports = { uploadTranscriptFile, uploadAudioFile };
