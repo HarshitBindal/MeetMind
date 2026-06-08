@@ -1,0 +1,25 @@
+# render.yaml — Render Blueprint for MeetMind Backend
+# https://docs.render.com/blueprint-spec
+
+services:
+  - type: web
+    name: meetmind-api
+    runtime: node
+    plan: free
+    region: oregon
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5000
+      - key: MONGO_URI
+        sync: false          # You will be prompted to enter this on first deploy
+      - key: JWT_SECRET
+        generateValue: true  # Render will auto-generate a secure random string
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: CLIENT_URL
+        sync: false          # Set to your Vercel frontend URL (e.g. https://meetmind.vercel.app)

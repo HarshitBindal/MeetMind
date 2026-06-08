@@ -7,8 +7,11 @@ const meetingRoutes = require('./routes/meeting.routes');
 
 const app = express();
 
-// Middleware
-app.use(cors());
+// CORS — restrict to the frontend origin in production
+app.use(cors({
+  origin: process.env.CLIENT_URL || 'http://localhost:5173',
+  credentials: true,
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
