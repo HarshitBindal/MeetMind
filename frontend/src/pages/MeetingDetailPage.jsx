@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import api from '../services/api';
 
@@ -30,6 +30,37 @@ const MeetingDetailPage = () => {
     };
     fetchMeeting();
   }, [id]);
+
+  // ── Polling: re-fetch while status is 'processing' ──
+  const pollingRef = useRef(null);
+
+  useEffect(() => {
+    // Start polling only when the meeting exists and is still processing
+    if (meeting && meeting.status === 'processing') {
+      pollingRef.current = setInterval(async () => {
+        try {
+          const res = await api.get(`/meetings/${id}`);
+          setMeeting(res.data);
+
+          // Stop polling once the status resolves
+          if (res.data.status !== 'processing') {
+            clearInterval(pollingRef.current);
+            pollingRef.current = null;
+          }
+        } catch (err) {
+          console.error('Polling error:', err.message);
+        }
+      }, 3000);
+    }
+
+    // Cleanup on unmount or when status changes
+    return () => {
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current);
+        pollingRef.current = null;
+      }
+    };
+  }, [meeting?.status, id]);
 
   const handleDelete = async () => {
     setIsDeleting(true);
@@ -190,6 +221,104 @@ const MeetingDetailPage = () => {
 
   const typeInfo = inputTypeDisplay[meeting.inputType] || { icon: '📋', label: meeting.inputType };
   const wasEdited = meeting.updatedAt && meeting.updatedAt !== meeting.createdAt;
+
+  // ── Processing screen ──
+  if (meeting.status === 'processing') {
+    return (
+      <div className="min-h-screen bg-[#0a0a0f] text-white">
+        {/* Navbar */}
+        <nav className="border-b border-white/[0.06] bg-white/[0.02] backdrop-blur-md">
+          <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+            <Link to="/dashboard" className="text-xl font-bold tracking-tight hover:opacity-80 transition-opacity">
+              Meet<span className="text-indigo-400">Mind</span>
+            </Link>
+            <Link to="/dashboard" className="text-sm text-white/50 hover:text-white transition-colors">
+              ← Back to Dashboard
+            </Link>
+          </div>
+        </nav>
+
+        <main className="max-w-2xl mx-auto px-6 py-24 flex flex-col items-center text-center animate-[fadeIn_0.3s_ease-out]">
+          {/* Animated spinner */}
+          <div className="relative mb-8">
+            <div className="w-20 h-20 rounded-full border-4 border-white/[0.06]" />
+            <div className="absolute inset-0 w-20 h-20 rounded-full border-4 border-transparent border-t-indigo-500 border-r-purple-500 animate-spin" />
+          </div>
+
+          <h1 className="text-2xl font-semibold mb-2">{meeting.title}</h1>
+          <p className="text-white/50 mb-6">AI is analyzing your meeting...</p>
+
+          <div className="space-y-3 w-full max-w-sm">
+            <div className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.02] border border-white/[0.06]">
+              <span className="text-indigo-400">✓</span>
+              <span className="text-white/60 text-sm">File uploaded</span>
+            </div>
+            <div className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.02] border border-white/[0.06]">
+              <span className="w-4 h-4 border-2 border-white/20 border-t-purple-400 rounded-full animate-spin" />
+              <span className="text-white/60 text-sm">Extracting insights...</span>
+            </div>
+            <div className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.02] border border-white/[0.06] opacity-40">
+              <span className="text-white/30">○</span>
+              <span className="text-white/30 text-sm">Ready for review</span>
+            </div>
+          </div>
+
+          <p className="text-white/20 text-xs mt-8">This page will update automatically</p>
+        </main>
+      </div>
+    );
+  }
+
+  // ── Failed screen ──
+  if (meeting.status === 'failed') {
+    return (
+      <div className="min-h-screen bg-[#0a0a0f] text-white">
+        {/* Navbar */}
+        <nav className="border-b border-white/[0.06] bg-white/[0.02] backdrop-blur-md">
+          <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+            <Link to="/dashboard" className="text-xl font-bold tracking-tight hover:opacity-80 transition-opacity">
+              Meet<span className="text-indigo-400">Mind</span>
+            </Link>
+            <Link to="/dashboard" className="text-sm text-white/50 hover:text-white transition-colors">
+              ← Back to Dashboard
+            </Link>
+          </div>
+        </nav>
+
+        <main className="max-w-lg mx-auto px-6 py-24 flex flex-col items-center text-center animate-[fadeIn_0.3s_ease-out]">
+          {/* Error icon */}
+          <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center mb-6">
+            <svg className="w-8 h-8 text-red-400" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+            </svg>
+          </div>
+
+          <h1 className="text-2xl font-semibold mb-2">Processing Failed</h1>
+          <p className="text-white/50 mb-2">{meeting.title}</p>
+
+          <div className="w-full p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm mb-8">
+            {meeting.errorMessage || 'An unknown error occurred during processing.'}
+          </div>
+
+          <div className="flex items-center gap-3">
+            <Link
+              to="/new"
+              className="px-5 py-2.5 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-500 transition-all"
+            >
+              Try Again
+            </Link>
+            <button
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className="px-5 py-2.5 text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg hover:bg-red-500/20 transition-all disabled:opacity-50"
+            >
+              {isDeleting ? 'Deleting...' : 'Delete'}
+            </button>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-white">

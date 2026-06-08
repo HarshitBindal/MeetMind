@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 
 const NewMeetingPage = () => {
+  const navigate = useNavigate();
   const [title, setTitle] = useState('');
   const [transcript, setTranscript] = useState('');
   const [file, setFile] = useState(null);
@@ -12,7 +13,6 @@ const NewMeetingPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('');
   const [error, setError] = useState('');
-  const [result, setResult] = useState(null);
 
   const ALLOWED_EXTENSIONS = ['.txt', '.md', '.pdf'];
   const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2 MB
@@ -171,7 +171,8 @@ const NewMeetingPage = () => {
         });
       }
 
-      setResult(response.data);
+      // Redirect to the meeting detail page — polling will handle the rest
+      navigate(`/meeting/${response.data._id}`);
     } catch (err) {
       setError(
         err.response?.data?.message ||
@@ -183,16 +184,7 @@ const NewMeetingPage = () => {
     }
   };
 
-  const resetForm = () => {
-    setResult(null);
-    setTitle('');
-    setTranscript('');
-    setFile(null);
-    setAudioFile(null);
-    setVideoFile(null);
-    setError('');
-    setLoadingMessage('');
-  };
+
 
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-white">
@@ -209,8 +201,7 @@ const NewMeetingPage = () => {
       </nav>
 
       <main className="max-w-4xl mx-auto px-6 py-12">
-        {!result ? (
-          <>
+        <>
             <div className="mb-8">
               <h1 className="text-3xl font-semibold mb-2">New Meeting</h1>
               <p className="text-white/50">Paste a transcript, upload a file, audio, or video to extract insights.</p>
@@ -410,7 +401,7 @@ const NewMeetingPage = () => {
                   {isLoading ? (
                     <>
                       <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      {loadingMessage || 'Processing...'}
+                      {loadingMessage || 'Uploading...'}
                     </>
                   ) : (
                     'Process Meeting'
@@ -419,79 +410,6 @@ const NewMeetingPage = () => {
               </div>
             </form>
           </>
-        ) : (
-          /* ── Results View ── */
-          <div className="animate-[fadeIn_0.3s_ease-out]">
-            <div className="flex items-center gap-3 mb-8">
-              <div className="w-10 h-10 rounded-full bg-green-500/10 flex items-center justify-center text-green-400">
-                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-              </div>
-              <div>
-                <h2 className="text-2xl font-semibold">Extraction Complete</h2>
-                <p className="text-white/50">{result.title}</p>
-              </div>
-            </div>
-
-            <div className="space-y-6">
-              {/* Summary */}
-              <div className="bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6">
-                <h3 className="text-lg font-medium mb-3 text-indigo-400">Summary</h3>
-                <p className="text-white/80 leading-relaxed">{result.summary}</p>
-              </div>
-
-              {/* Action Items */}
-              <div className="bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6">
-                <h3 className="text-lg font-medium mb-4 text-purple-400">Action Items</h3>
-                {result.actionItems?.length > 0 ? (
-                  <ul className="space-y-3">
-                    {result.actionItems.map((item, i) => (
-                      <li key={i} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 bg-white/[0.03] rounded-xl border border-white/[0.04]">
-                        <span className="text-white/90">{item.task}</span>
-                        <div className="flex items-center gap-3 text-xs">
-                          <span className="px-2 py-1 rounded bg-indigo-500/10 text-indigo-300">
-                            👤 {item.owner}
-                          </span>
-                          {item.deadline && (
-                            <span className="px-2 py-1 rounded bg-red-500/10 text-red-300">
-                              ⏱️ {item.deadline}
-                            </span>
-                          )}
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="text-white/40 italic">No action items detected.</p>
-                )}
-              </div>
-
-              {/* Decisions */}
-              <div className="bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6">
-                <h3 className="text-lg font-medium mb-3 text-blue-400">Key Decisions</h3>
-                {result.decisions?.length > 0 ? (
-                  <ul className="list-disc list-inside space-y-2 text-white/80">
-                    {result.decisions.map((decision, i) => (
-                      <li key={i}>{decision}</li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="text-white/40 italic">No key decisions detected.</p>
-                )}
-              </div>
-              
-              <div className="pt-6">
-                <button 
-                  onClick={resetForm}
-                  className="text-sm text-white/50 hover:text-white transition-colors"
-                >
-                  ← Extract another meeting
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
       </main>
     </div>
   );
