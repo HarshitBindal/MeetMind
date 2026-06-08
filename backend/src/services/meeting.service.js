@@ -73,13 +73,23 @@ const processMeetingInput = async ({ userId, title, inputType, rawText, file }) 
   const sourceFileName = file ? file.originalname : '';
 
   // ── Phase A: Create a placeholder meeting immediately ──
-  const meeting = await Meeting.create({
-    userId,
-    title,
-    inputType,
-    sourceFileName,
-    status: 'processing',
-  });
+  let meeting;
+  try {
+    meeting = await Meeting.create({
+      userId,
+      title,
+      inputType,
+      sourceFileName,
+      status: 'processing',
+    });
+  } catch (err) {
+    // If the DB write fails, the background task never spawns, so the
+    // Multer temp file would leak on disk forever. Clean it up now.
+    if (file && file.path) {
+      safeDelete(file.path);
+    }
+    throw err;
+  }
 
   // Re-fetch to apply schema select rules (e.g. rawText: select: false)
   const initialMeeting = await Meeting.findById(meeting._id);
