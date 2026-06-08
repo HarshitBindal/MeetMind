@@ -8,6 +8,7 @@ const {
   getMeetings,
   getMeetingById,
   deleteMeeting,
+  updateMeeting,
 } = require('../controllers/meeting.controller');
 const { protect } = require('../middleware/auth');
 const { uploadTranscriptFile, uploadAudioFile, uploadVideoFile } = require('../middleware/upload');
@@ -20,6 +21,7 @@ router.use(protect);
 // ── CRUD routes (Phase 9) ──
 router.get('/', getMeetings);
 router.get('/:id', getMeetingById);
+router.put('/:id', updateMeeting);
 router.delete('/:id', deleteMeeting);
 
 // ── Creation routes ──

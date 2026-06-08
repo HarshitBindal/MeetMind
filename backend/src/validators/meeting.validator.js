@@ -16,4 +16,33 @@ const createTranscriptMeetingSchema = z.object({
     .trim(),
 });
 
-module.exports = { createTranscriptMeetingSchema };
+/**
+ * Validation schema for updating a meeting.
+ * All fields are optional — only provided fields will be updated.
+ */
+const updateMeetingSchema = z.object({
+  title: z
+    .string()
+    .min(1, 'Meeting title cannot be empty')
+    .max(200, 'Title cannot exceed 200 characters')
+    .trim()
+    .optional(),
+  summary: z
+    .string()
+    .trim()
+    .optional(),
+  actionItems: z
+    .array(
+      z.object({
+        task: z.string().min(1, 'Task description is required').trim(),
+        owner: z.string().trim().optional().default('Unassigned'),
+        deadline: z.string().trim().optional().default(''),
+      })
+    )
+    .optional(),
+  decisions: z
+    .array(z.string().trim())
+    .optional(),
+});
+
+module.exports = { createTranscriptMeetingSchema, updateMeetingSchema };

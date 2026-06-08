@@ -1,6 +1,6 @@
 const { processMeetingInput } = require('../services/meeting.service');
 const Meeting = require('../models/Meeting');
-const { createTranscriptMeetingSchema } = require('../validators/meeting.validator');
+const { createTranscriptMeetingSchema, updateMeetingSchema } = require('../validators/meeting.validator');
 
 /**
  * Validates that the title from a multipart form is present and within limits.
@@ -210,6 +210,55 @@ const deleteMeeting = async (req, res) => {
   }
 };
 
+// ─────────────────────────────────────────────────
+//  Edit & Review (Phase 10)
+// ─────────────────────────────────────────────────
+
+/**
+ * @desc    Update a meeting (title, summary, actionItems, decisions)
+ * @route   PUT /api/meetings/:id
+ * @access  Private
+ */
+const updateMeeting = async (req, res) => {
+  try {
+    // Validate the incoming payload
+    const updates = updateMeetingSchema.parse(req.body);
+
+    // Find the meeting and ensure ownership
+    const meeting = await Meeting.findOne({
+      _id: req.params.id,
+      userId: req.user._id,
+    }).select('+rawText');
+
+    if (!meeting) {
+      return res.status(404).json({ message: 'Meeting not found.' });
+    }
+
+    // Apply only the fields that were provided
+    if (updates.title !== undefined) meeting.title = updates.title;
+    if (updates.summary !== undefined) meeting.summary = updates.summary;
+    if (updates.actionItems !== undefined) meeting.actionItems = updates.actionItems;
+    if (updates.decisions !== undefined) meeting.decisions = updates.decisions;
+
+    // Save — Mongoose will automatically update the `updatedAt` timestamp
+    await meeting.save();
+
+    res.json(meeting);
+  } catch (error) {
+    if (error.name === 'ZodError') {
+      return res.status(400).json({
+        message: 'Validation failed',
+        errors: error.errors.map((e) => e.message),
+      });
+    }
+    console.error('Update meeting error:', error);
+    if (error.kind === 'ObjectId') {
+      return res.status(404).json({ message: 'Meeting not found.' });
+    }
+    res.status(500).json({ message: 'Server error updating meeting' });
+  }
+};
+
 module.exports = {
   createFromText,
   createFromFile,
@@ -218,5 +267,6 @@ module.exports = {
   getMeetings,
   getMeetingById,
   deleteMeeting,
+  updateMeeting,
 };
 
