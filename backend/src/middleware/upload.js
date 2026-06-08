@@ -1,5 +1,6 @@
 const multer = require('multer');
 const path = require('path');
+const fs = require('fs');
 
 /**
  * Multer middleware for handling transcript file uploads.
@@ -9,10 +10,16 @@ const path = require('path');
  * - Limits file size to 2 MB.
  */
 
+// Ensure the uploads directory exists (critical for fresh deploys like Render)
+const uploadsDir = path.join(__dirname, '..', 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
 // Storage configuration: save to uploads/ with a unique filename
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, path.join(__dirname, '..', 'uploads'));
+    cb(null, uploadsDir);
   },
   filename: (req, file, cb) => {
     // Unique name: timestamp-originalname
