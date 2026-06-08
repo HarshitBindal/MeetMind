@@ -1,4 +1,5 @@
 const { processMeetingInput } = require('../services/meeting.service');
+const Meeting = require('../models/Meeting');
 const { createTranscriptMeetingSchema } = require('../validators/meeting.validator');
 
 /**
@@ -135,4 +136,87 @@ const createMeetingFromVideo = async (req, res) => {
   }
 };
 
-module.exports = { createFromText, createFromFile, createMeetingFromAudio, createMeetingFromVideo };
+// ─────────────────────────────────────────────────
+//  CRUD Operations (Phase 9)
+// ─────────────────────────────────────────────────
+
+/**
+ * @desc    Get all meetings for the logged-in user
+ * @route   GET /api/meetings
+ * @access  Private
+ */
+const getMeetings = async (req, res) => {
+  try {
+    const meetings = await Meeting.find({ userId: req.user._id })
+      .sort({ createdAt: -1 }); // Newest first (rawText excluded automatically via select: false)
+
+    res.json(meetings);
+  } catch (error) {
+    console.error('Get meetings error:', error);
+    res.status(500).json({ message: 'Server error fetching meetings' });
+  }
+};
+
+/**
+ * @desc    Get a single meeting by ID (includes rawText for detail view)
+ * @route   GET /api/meetings/:id
+ * @access  Private
+ */
+const getMeetingById = async (req, res) => {
+  try {
+    const meeting = await Meeting.findOne({
+      _id: req.params.id,
+      userId: req.user._id, // Ensure the user owns this meeting
+    }).select('+rawText'); // Explicitly include rawText for the detail view
+
+    if (!meeting) {
+      return res.status(404).json({ message: 'Meeting not found.' });
+    }
+
+    res.json(meeting);
+  } catch (error) {
+    console.error('Get meeting by ID error:', error);
+    // Handle invalid MongoDB ObjectId format
+    if (error.kind === 'ObjectId') {
+      return res.status(404).json({ message: 'Meeting not found.' });
+    }
+    res.status(500).json({ message: 'Server error fetching meeting' });
+  }
+};
+
+/**
+ * @desc    Delete a meeting by ID
+ * @route   DELETE /api/meetings/:id
+ * @access  Private
+ */
+const deleteMeeting = async (req, res) => {
+  try {
+    const meeting = await Meeting.findOneAndDelete({
+      _id: req.params.id,
+      userId: req.user._id, // Ensure the user can only delete their own meetings
+    });
+
+    if (!meeting) {
+      return res.status(404).json({ message: 'Meeting not found.' });
+    }
+
+    res.json({ message: 'Meeting deleted successfully.' });
+  } catch (error) {
+    console.error('Delete meeting error:', error);
+    if (error.kind === 'ObjectId') {
+      return res.status(404).json({ message: 'Meeting not found.' });
+    }
+    res.status(500).json({ message: 'Server error deleting meeting' });
+  }
+};
+
+module.exports = {
+  createFromText,
+  createFromFile,
+  createMeetingFromAudio,
+  createMeetingFromVideo,
+  getMeetings,
+  getMeetingById,
+  deleteMeeting,
+};
+

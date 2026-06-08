@@ -1,6 +1,14 @@
 const express = require('express');
 const multer = require('multer');
-const { createFromText, createFromFile, createMeetingFromAudio, createMeetingFromVideo } = require('../controllers/meeting.controller');
+const {
+  createFromText,
+  createFromFile,
+  createMeetingFromAudio,
+  createMeetingFromVideo,
+  getMeetings,
+  getMeetingById,
+  deleteMeeting,
+} = require('../controllers/meeting.controller');
 const { protect } = require('../middleware/auth');
 const { uploadTranscriptFile, uploadAudioFile, uploadVideoFile } = require('../middleware/upload');
 
@@ -8,6 +16,13 @@ const router = express.Router();
 
 // All meeting routes require authentication
 router.use(protect);
+
+// ── CRUD routes (Phase 9) ──
+router.get('/', getMeetings);
+router.get('/:id', getMeetingById);
+router.delete('/:id', deleteMeeting);
+
+// ── Creation routes ──
 
 // Create a meeting via pasted transcript
 router.post('/text', createFromText);
@@ -61,4 +76,3 @@ router.post('/video', (req, res, next) => {
 }, createMeetingFromVideo);
 
 module.exports = router;
-
