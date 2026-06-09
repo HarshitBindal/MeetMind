@@ -4,6 +4,21 @@ AI-powered meeting intelligence — paste a transcript, upload a file, audio, or
 
 ---
 
+<div align="center">
+  <img src="./assets/landing-page.png" alt="MeetMind Landing Page" width="800"/>
+  <br/>
+  <i>Landing Page with animated glowing UI</i>
+</div>
+
+<br/>
+
+<div align="center">
+  <img src="./assets/dashboard.png" alt="MeetMind Dashboard" width="400"/>
+  <img src="./assets/meeting-detail.png" alt="Meeting Analysis Details" width="400"/>
+</div>
+
+---
+
 ## Architecture
 
 ```
