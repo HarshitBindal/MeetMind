@@ -197,11 +197,90 @@ const MeetingDetailPage = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center">
-        <div className="flex items-center gap-3 text-white/50">
-          <span className="w-5 h-5 border-2 border-white/20 border-t-indigo-400 rounded-full animate-spin" />
-          Loading meeting...
-        </div>
+      <div className="min-h-screen bg-[#0a0a0f] text-white">
+        {/* Navbar skeleton */}
+        <nav className="border-b border-white/[0.06] bg-white/[0.02] backdrop-blur-md">
+          <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+            <div className="text-xl font-bold tracking-tight">
+              Meet<span className="text-indigo-400">Mind</span>
+            </div>
+            <div className="h-4 w-32 rounded bg-white/[0.06] animate-pulse" />
+          </div>
+        </nav>
+
+        <main className="max-w-7xl mx-auto px-6 py-10 animate-[fadeIn_0.3s_ease-out]">
+          {/* Header skeleton */}
+          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-8 animate-pulse">
+            <div className="flex-1 min-w-0">
+              <div className="h-8 w-2/3 rounded bg-white/[0.06] mb-3" />
+              <div className="flex items-center gap-3">
+                <div className="h-4 w-20 rounded bg-white/[0.04]" />
+                <div className="h-4 w-24 rounded bg-white/[0.04]" />
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="h-9 w-20 rounded-lg bg-white/[0.04]" />
+              <div className="h-9 w-20 rounded-lg bg-white/[0.04]" />
+            </div>
+          </div>
+
+          {/* Content grid skeleton */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Left column */}
+            <div className="lg:col-span-2 space-y-6 animate-pulse">
+              {/* Summary skeleton */}
+              <div className="bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6">
+                <div className="h-5 w-24 rounded bg-indigo-500/20 mb-4" />
+                <div className="space-y-2.5">
+                  <div className="h-4 w-full rounded bg-white/[0.04]" />
+                  <div className="h-4 w-full rounded bg-white/[0.04]" />
+                  <div className="h-4 w-3/4 rounded bg-white/[0.04]" />
+                </div>
+              </div>
+
+              {/* Action items skeleton */}
+              <div className="bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6">
+                <div className="h-5 w-32 rounded bg-purple-500/20 mb-4" />
+                <div className="space-y-3">
+                  {[1, 2, 3].map((n) => (
+                    <div key={n} className="flex items-center justify-between p-4 bg-white/[0.03] rounded-xl border border-white/[0.04]">
+                      <div className="h-4 w-1/2 rounded bg-white/[0.06]" />
+                      <div className="flex items-center gap-2">
+                        <div className="h-5 w-16 rounded bg-white/[0.04]" />
+                        <div className="h-5 w-16 rounded bg-white/[0.04]" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Decisions skeleton */}
+              <div className="bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6">
+                <div className="h-5 w-32 rounded bg-blue-500/20 mb-4" />
+                <div className="space-y-2">
+                  {[1, 2].map((n) => (
+                    <div key={n} className="flex items-start gap-3 p-3 bg-white/[0.03] rounded-xl border border-white/[0.04]">
+                      <div className="h-4 w-4 rounded bg-white/[0.06] mt-0.5 flex-shrink-0" />
+                      <div className="h-4 w-full rounded bg-white/[0.04]" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Right column — Transcript skeleton */}
+            <div className="lg:col-span-1 animate-pulse">
+              <div className="bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6">
+                <div className="h-5 w-36 rounded bg-emerald-500/20 mb-4" />
+                <div className="space-y-2">
+                  {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
+                    <div key={n} className="h-3.5 rounded bg-white/[0.04]" style={{ width: `${60 + Math.random() * 40}%` }} />
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </main>
       </div>
     );
   }

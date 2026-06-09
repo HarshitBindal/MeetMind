@@ -100,13 +100,33 @@ const DashboardPage = () => {
           </div>
         )}
 
-        {/* Loading */}
+        {/* Loading skeletons */}
         {isLoading ? (
-          <div className="flex items-center justify-center py-24">
-            <div className="flex items-center gap-3 text-white/50">
-              <span className="w-5 h-5 border-2 border-white/20 border-t-indigo-400 rounded-full animate-spin" />
-              Loading meetings...
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 animate-[fadeIn_0.3s_ease-out]">
+            {[1, 2, 3, 4, 5, 6].map((n) => (
+              <div
+                key={n}
+                className="bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6 animate-pulse"
+              >
+                {/* Top row skeleton */}
+                <div className="flex items-center justify-between mb-4">
+                  <div className="h-5 w-16 rounded-full bg-white/[0.06]" />
+                  <div className="h-4 w-12 rounded bg-white/[0.04]" />
+                </div>
+                {/* Title skeleton */}
+                <div className="h-5 w-3/4 rounded bg-white/[0.06] mb-3" />
+                {/* Summary skeleton */}
+                <div className="space-y-2 mb-4">
+                  <div className="h-3.5 w-full rounded bg-white/[0.04]" />
+                  <div className="h-3.5 w-5/6 rounded bg-white/[0.04]" />
+                </div>
+                {/* Bottom stats skeleton */}
+                <div className="flex items-center gap-4 pt-4 border-t border-white/[0.04]">
+                  <div className="h-3.5 w-20 rounded bg-white/[0.04]" />
+                  <div className="h-3.5 w-20 rounded bg-white/[0.04]" />
+                </div>
+              </div>
+            ))}
           </div>
         ) : meetings.length === 0 ? (
           /* Empty state */
