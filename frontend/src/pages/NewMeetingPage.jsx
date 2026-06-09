@@ -172,7 +172,7 @@ const NewMeetingPage = () => {
       }
 
       // Redirect to the meeting detail page — polling will handle the rest
-      navigate(`/meeting/${response.data._id}`);
+      navigate(`/meetings/${response.data._id}`);
     } catch (err) {
       setError(
         err.response?.data?.message ||

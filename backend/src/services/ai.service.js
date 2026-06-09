@@ -60,7 +60,7 @@ ${transcriptText}
     return JSON.parse(response.text);
   } catch (error) {
     console.error("AI Extraction Error:", error);
-    throw new Error('Failed to extract meeting data using AI');
+    throw new Error(`Failed to extract meeting data using AI: ${error.message}`);
   }
 };
 
