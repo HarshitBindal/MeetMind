@@ -381,7 +381,7 @@ const MeetingDetailPage = () => {
 
           <div className="flex items-center gap-3">
             <Link
-              to="/new"
+              to="/meetings/new"
               className="px-5 py-2.5 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-500 transition-all"
             >
               Try Again
